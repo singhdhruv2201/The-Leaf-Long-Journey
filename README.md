@@ -1,37 +1,43 @@
-The Leaf-Long Journey — a Three.js demo scene (previously "punch-the-rec").
 
-Assets include example environments under `assets/` and a project logo at `assets/Gemini_Generated_logo_fall_background.png`.
+# The Leaf Long Journey
 
-Change log (2025-09-21):
-- Increased player movement speed constants in `main.js` to give a quicker "moment" feel:
-  - `speed` changed to 9.0 m/s
-  - `runSpeed` changed to 14.0 m/s
-  - `accel` changed to 28.0 m/s^2
-  - `rotationLerp` changed to 18.0
+A small, cozy Three.js exploration prototype. Wander a few autumn-themed micro-scenes — Road, Autumn Nest, Gravity Falls, and House on the Hill — while enjoying a soft, frosted UI, gentle motion-led transitions, and simple physics-driven movement.
 
-How to tweak movement:
-- Open `main.js` and search for the movement constants near the player controller comment block. Adjust `speed` and `accel` to taste.
+Key features
+- In-scene controls and three visual modes (Day / Afternoon / Night).
+- Lightweight Motion One-based animations with a local shim fallback.
 
-How to test locally:
-- Serve the folder with a static server (e.g., `npx http-server .` or `python3 -m http.server`) and open `index.html` in a browser.
-- Start the scene with the Start button and use WASD / arrow keys to move. Adjust constants and reload to iterate.
+Quick start
+1. Serve the project folder with a static server (examples):
 
-Notes:
-- The file `main.js` imports modules from CDNs and is intended for browser execution; Node `--check` will not parse those ESM imports unless configured for ESM.
+```bash
+# using node
+npx http-server .
+# or python
+python3 -m http.server 5500
+```
 
-Collision testing and tuning:
-- The road model (`assets/road.glb`) now has a Cannon Trimesh added at physics init so the player should not pass through the road geometry.
-  - To test collisions: start a static server and open the scene, then try to walk into parts of the road model. The player is represented by an invisible capsule-shaped physics body (capsule approximated with cylinder + sphere caps). If you clip through geometry, try increasing `PLAYER_RADIUS` or ensure the road Trimesh was added without errors (check DevTools console for "Road trimesh added to physics world at init").
-- Tuning player physics in `main.js`:
-  - `PLAYER_RADIUS` (default 0.45) controls collision clearance — increase to make the player bulkier.
-  - `PLAYER_MASS` affects inertia when colliding with dynamic bodies (static road is mass 0).
-  - `playerBody.linearDamping` (default 0.15) controls sliding friction; increase to reduce sliding.
+2. Open the landing page in your browser: http://localhost:8080/index.html (or the port your server uses).
+3. Use the Start panel to Play → open the menu and choose an environment.
+4. Controls: WASD / arrow keys to move, Shift to sprint, Space to jump, mouse to look (click to lock pointer).
 
-Sprint and collision improvements:
-- Sprint is now bound to the Shift key (hold Shift to use `runSpeed`).
-- The player collision shape was improved: a capsule-like compound (cylinder + sphere caps) is used for smoother, less snaggy collisions.
-- Camera FOV increased to 70 for a wider view. Adjust `new THREE.PerspectiveCamera(70, ...)` in `main.js` to change the FOV.
+Developer notes
+- Animation: the project uses a small local Motion One shim (`assets/motion.min.js`) and falls back to CDN. Animations are guarded so the app works without Motion One.
+- Styling: a compact Tailwind-like CSS file (`assets/tailwind.css`) provides utilities used across pages. For production, consider integrating the official Tailwind CLI/PostCSS build to purge unused CSS.
+- Assets: models and thumbnails live in `assets/`. Credits for several models are shown in frosted modals on the menu page — keep attribution when reusing assets.
 
-Road texture:
-- The image `assets/Untitled_0.png` is now applied as the diffuse (albedo) texture for `assets/road.glb` when UVs are present.
-- If the texture appears stretched or tiled, edit `main.js` where `roadTexture` is loaded and set `roadTexture.repeat.set(x,y)` and `roadTexture.offset.set(u,v)` to adjust tiling/placement. Also ensure `c.geometry.attributes.uv` is present on the mesh (GLB usually has UVs baked in).
+Tweaks & tuning
+- Player movement and physics constants live in `main.js` near the player controller — edit `speed`, `runSpeed`, `accel`, and `PLAYER_RADIUS` to change feel and collision size.
+- GLTF loading: model paths are defined in `main.js` (envToPath). Ensure those files exist or add graceful fallbacks if you replace assets.
+
+Known issues & next steps
+- Accessibility: modal focus trapping, ESC-to-close, and full keyboard navigation need improvement.
+- Performance: consider texture compression, LODs, and a production Tailwind build.
+- Robustness: add more explicit handling for failed GLTF loads and fallback thumbnails.
+
+Credits
+- Prototype and code: singhdhruv2201
+- Models: individual credits are shown in the menu cards (Autumn Nest, House on the Hill, etc.). See each modal for exact attribution and license (usually CC-BY-4.0).
+
+License
+- This repository contains mixed content (user-provided assets). Check individual model credits before redistribution.
