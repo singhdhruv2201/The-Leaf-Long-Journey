@@ -1,0 +1,11 @@
+{
+  "name": "leaf-long-journey",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build:css": "npx tailwindcss -i ./src/tailwind.input.css -o ./assets/tailwind.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.5.0"
+  }
+}

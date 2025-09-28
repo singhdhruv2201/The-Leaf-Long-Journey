@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>The Leaf-Long Journey — Menu</title>
+  <!-- Tailwind CDN (for dev/demo) -->
+  <link rel="stylesheet" href="assets/tailwind.css" />
+</head>
+<body>
+  <div class="max-w-6xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+    <main class="lg:col-span-2 bg-gradient-to-b from-slate-900 to-slate-800 rounded-2xl p-8 shadow-xl">
+      <div class="flex items-center gap-6">
+  <img class="w-28 h-28 object-contain" src="assets/Gemini_Generated_logo_fall_background.png" alt="logo" />
+        <div>
+          <h1 class="text-3xl font-extrabold text-white">The Leaf-Long Journey</h1>
+          <p class="mt-1 text-slate-300">Choose an environment to start. Each environment is a separate scene file and will load into the game page.</p>
+        </div>
+      </div>
+
+      <div id="envList" class="mt-8 grid grid-cols-1 gap-4">
+        <!-- Environment cards -->
+        <a data-thumb="assets/shaded_0.png" class="envCard group block bg-slate-800/60 border border-slate-700 rounded-lg p-4 hover:scale-102 transform transition will-change-transform" href="index.html?env=road">
+          <div class="flex items-center gap-4">
+            <div class="w-28 h-16 bg-black rounded overflow-hidden flex items-center justify-center">
+              <img src="assets/shaded_0.png" alt="road thumb" class="w-full h-full object-cover"/>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-white">Road</h3>
+              <p class="text-sm text-slate-300">Industrial road environment (collidable road model)</p>
+            </div>
+            <div class="text-slate-400 text-sm">Enter →</div>
+          </div>
+        </a>
+
+        <a class="envCard group block bg-slate-800/60 border border-slate-700 rounded-lg p-4 hover:scale-102 transform transition" href="index.html?env=scene">
+          <div class="flex items-center gap-4">
+            <div class="w-28 h-16 bg-black rounded overflow-hidden flex items-center justify-center">
+              <img src="assets/scene.gltf" alt="scene thumb" class="w-full h-full object-cover"/>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-white">Scene</h3>
+              <p class="text-sm text-slate-300">Original scene model</p>
+            </div>
+            <div class="text-slate-400 text-sm">Enter →</div>
+          </div>
+        </a>
+
+        <a class="envCard group block bg-slate-800/60 border border-slate-700 rounded-lg p-4 hover:scale-102 transform transition" href="index.html?env=leafs">
+          <div class="flex items-center gap-4">
+            <div class="w-28 h-16 bg-black rounded overflow-hidden flex items-center justify-center">
+              <img src="assets/leafs_scene.gltf" alt="leafs thumb" class="w-full h-full object-cover"/>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-white">Leafs Scene</h3>
+              <p class="text-sm text-slate-300">Foresty leaf scattering demo</p>
+            </div>
+            <div class="text-slate-400 text-sm">Enter →</div>
+          </div>
+        </a>
+
+        <a class="envCard group block bg-slate-800/60 border border-slate-700 rounded-lg p-4 hover:scale-102 transform transition" href="index.html?env=autumn_nest">
+          <div class="flex items-center gap-4">
+            <div class="w-28 h-16 bg-black rounded overflow-hidden flex items-center justify-center">
+              <img src="assets/shaded_0.png" alt="autumn thumb" class="w-full h-full object-cover"/>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-white">Autumn Nest</h3>
+              <p class="text-sm text-slate-300">Cozy autumn scene with foliage and nest</p>
+            </div>
+            <div class="text-slate-400 text-sm">Enter →</div>
+          </div>
+        </a>
+
+        <a class="envCard group block bg-slate-800/60 border border-slate-700 rounded-lg p-4 hover:scale-102 transform transition" href="index.html?env=gravity-falls">
+          <div class="flex items-center gap-4">
+            <div class="w-28 h-16 bg-black rounded overflow-hidden flex items-center justify-center">
+              <img src="assets/shaded_0.png" alt="gravity falls thumb" class="w-full h-full object-cover"/>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-white">Gravity Falls</h3>
+              <p class="text-sm text-slate-300">New environment: Gravity Falls</p>
+            </div>
+            <div class="text-slate-400 text-sm">Enter →</div>
+          </div>
+        </a>
+
+        <a class="envCard group block bg-slate-800/60 border border-slate-700 rounded-lg p-4 hover:scale-102 transform transition" href="index.html?env=house_on_the_hill">
+          <div class="flex items-center gap-4">
+            <div class="w-28 h-16 bg-black rounded overflow-hidden flex items-center justify-center">
+              <img src="assets/house_on_the_hill/textures/AllTogetherBake_baseColor.jpeg" alt="house on the hill thumb" class="w-full h-full object-cover"/>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-white">House on the Hill</h3>
+              <p class="text-sm text-slate-300">Quaint house and hill environment</p>
+            </div>
+            <div class="text-slate-400 text-sm">Enter →</div>
+          </div>
+        </a>
+      </div>
+
+      <p class="mt-6 text-sm text-slate-400">Made with Three.js • physics by cannon-es • assets in the <code class="bg-slate-900 px-1 rounded">assets/</code> folder</p>
+    </main>
+
+    <aside class="hidden lg:block">
+      <div class="bg-slate-900/50 rounded-xl p-6 shadow-lg">
+        <h3 class="text-white font-semibold">Controls</h3>
+        <p class="text-sm text-slate-300 mt-2">WASD — move, Shift — sprint, Space — jump, Mouse — look (click to lock).</p>
+        <h3 class="text-white font-semibold mt-6">Notes</h3>
+        <p class="text-sm text-slate-300 mt-2">If the scene fails to load, check the browser console for errors. Use the Menu link at top left to return to this page while playing.</p>
+      </div>
+    </aside>
+</body>
+
+  <script>
+    // Helper: ensure Motion One is loaded (returns the global `motion` object)
+    function ensureMotionOne(timeout = 5000) {
+      // Try a local vendor file first (assets/motion.min.js), then fall back to CDN
+      return new Promise((resolve, reject) => {
+        try { if (typeof window !== 'undefined' && window.motion) return resolve(window.motion); } catch (e) {}
+
+        const tryLoad = (src) => new Promise((res, rej) => {
+          const s = document.createElement('script');
+          let done = false;
+          const t = setTimeout(() => { if (done) return; done = true; rej(new Error('load timeout')); }, timeout);
+          s.src = src; s.async = true;
+          s.onload = () => { if (done) return; done = true; clearTimeout(t); res(window.motion || true); };
+          s.onerror = (err) => { if (done) return; done = true; clearTimeout(t); rej(err); };
+          document.head.appendChild(s);
+        });
+
+        (async () => {
+          try {
+            // try local
+            await tryLoad('assets/motion.min.js');
+            return resolve(window.motion || null);
+          } catch (e) {
+            // local failed — try CDN
+            try {
+              await tryLoad('https://unpkg.com/motion@10.17.7/dist/motion.min.js');
+              return resolve(window.motion || null);
+            } catch (err) {
+              return reject(err);
+            }
+          }
+        })();
+      });
+    }
+
+    (async function(){
+      try {
+        const motionLib = await ensureMotionOne().catch((e) => { console.warn('Failed to load Motion One, skipping animations', e); return null; });
+        if (!motionLib) return;
+        const cards = Array.from(document.querySelectorAll('.envCard'));
+        // staggered entrance
+        motionLib.animate(cards, { opacity: [0,1], transform: ['translateY(10px) scale(0.98)','translateY(0px) scale(1)'] }, { delay: 0.05, duration: 0.6, easing: 'ease' });
+        // hover scale via pointer events
+        cards.forEach(c => {
+          c.addEventListener('pointerenter', () => motionLib.animate(c, { scale: 1.03 }, { duration: 0.18 }));
+          c.addEventListener('pointerleave', () => motionLib.animate(c, { scale: 1.0 }, { duration: 0.18 }));
+        });
+      } catch (e) { console.warn('Motion animate failed', e); }
+    })();
+  </script>
+</html>

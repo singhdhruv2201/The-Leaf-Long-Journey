@@ -1,0 +1,11 @@
+Model Information:
+* title:	Autumn Nest
+* source:	https://sketchfab.com/3d-models/autumn-nest-9ff48b4830e2418f92e1b75afb160a52
+* author:	kennethtzh (https://sketchfab.com/kennethtzh)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Autumn Nest" (https://sketchfab.com/3d-models/autumn-nest-9ff48b4830e2418f92e1b75afb160a52) by kennethtzh (https://sketchfab.com/kennethtzh) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
