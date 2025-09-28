@@ -1,6 +1,19 @@
 /* Minimal local Tailwind subset for the project (hand-crafted) */
 :root{
-  --bg-slate-900:#0f172a;--bg-slate-800:#0b1220;--slate-300:#cbd5e1;--slate-400:#94a3b8;--indigo-600:#4f46e5;--indigo-500:#6366f1;
+  /* Project palette provided by user */
+  --brand-deep-plum: #5f0f40; /* primary */
+  --brand-crimson: #9a031e;   /* accent */
+  --brand-amber: #fb8b24;     /* highlight */
+  --brand-deep-amber: #e36414;/* highlight-2 */
+  --brand-teal: #0f4c5c;      /* secondary */
+
+  /* semantic fallbacks mapping to old names for convenience */
+  --bg-slate-900: var(--brand-deep-plum);
+  --bg-slate-800: #0b1220; /* keep dark fallback for depth */
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --indigo-600: var(--brand-crimson);
+  --indigo-500: var(--brand-amber);
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial}
@@ -100,3 +113,59 @@ img{max-width:100%;display:block}
 .btn{display:inline-block;padding:.5rem 1rem;border-radius:.375rem}
 
 /* End of minimal tailwind subset */
+/* Button utilities */
+.rounded-full{border-radius:9999px}
+.shadow-md{box-shadow:0 8px 24px rgba(0,0,0,0.32)}
+.btn-primary{background:var(--brand-crimson);color:#fff;padding:.5rem 1.25rem;border-radius:.75rem;border:none;display:inline-flex;align-items:center;gap:.5rem}
+.btn-primary{background:var(--brand-crimson);color:#fff;padding:16px 28px;border-radius:14px;border:none;display:inline-flex;align-items:center;gap:.75rem;font-size:18px}
+.btn-primary:hover{background:var(--brand-deep-amber);}
+.btn-ghost{background:rgba(255,255,255,0.04);color:#fff;padding:14px 24px;border:1px solid rgba(255,255,255,0.07);border-radius:12px}
+.btn-icon{display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:12px;background:rgba(255,255,255,0.03)}
+.btn-group{display:flex;flex-direction:column;gap:14px;align-items:center}
+
+/* Frosted panel for stacked buttons */
+.frosted-panel{backdrop-filter: blur(8px) saturate(120%);background:rgba(255,255,255,0.04);padding:18px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,0.4);display:flex;flex-direction:column;align-items:center}
+.frosted-panel .btn-primary,.frosted-panel .btn-ghost{width:300px;text-align:center;display:inline-flex;align-items:center;justify-content:center}
+.frosted-panel .btn-primary{font-size:20px;padding:14px 28px;min-height:56px;line-height:20px}
+.frosted-panel .btn-ghost{font-size:16px;padding:12px 22px;min-height:52px;line-height:18px}
+
+/* Content area that expands/collapses inside the frosted panel */
+.panel-content{width:100%;max-width:320px;margin-top:12px;overflow:hidden;border-radius:12px}
+.panel-content .content-inner{padding:12px 14px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));color:var(--slate-300);font-size:14px}
+
+/* motion-friendly helpers (initial states) */
+.motion-hidden{height:0;opacity:0;transform:translateY(-6px)}
+.motion-visible{height:auto;opacity:1;transform:translateY(0)}
+
+/* Landing title font and styles */
+@font-face{
+  font-family: 'GratefulMemories';
+  src: url('/text/Grateful_Memories.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+.landing-title{
+  font-family:'GratefulMemories', Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
+  color:#ffffff;
+  font-size:clamp(40px, 6.5vw, 84px);
+  letter-spacing:0.6px;
+  text-align:center;
+  text-shadow:0 8px 32px rgba(0,0,0,0.55);
+  font-weight:700;
+  margin-top:6px;
+  display:block;
+  width:100%;
+}
+.landing-title.sm{font-size:20px}
+
+/* Center the landing title vertically in the greeting area and keep start panel below it */
+#greeting{display:flex;align-items:center;justify-content:center}
+#logoStage{position:relative;width:100%;display:flex;flex-direction:column;align-items:center}
+#landingTitle{position:relative;z-index:45}
+#gameLogo{position:relative;z-index:46}
+#startPanel{position:relative;z-index:44;margin-top:22px}
+
+/* Environment card title sizing */
+.env-title{font-size:1.375rem; /* ~22px */ font-weight:700; line-height:1.2}
+.env-sub{font-size:.95rem; color:var(--slate-300)}

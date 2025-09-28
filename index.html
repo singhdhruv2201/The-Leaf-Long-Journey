@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="assets/tailwind.css" />
   </head>
-  <body>
+  <body style="background: linear-gradient(180deg, rgba(249, 166, 0, 0.954), rgba(255, 189, 56, 0.882));">
     <!-- UI controls removed (start/reset/speed) — use the start menu instead -->
 
     <!-- Game canvas; menu is a separate page (menu.html) -->
@@ -24,17 +24,44 @@
       let __hasEnv = false;
       try { __hasEnv = new URLSearchParams(window.location.search).has('env'); } catch (e) { __hasEnv = false; }
     </script>
-    <nav class="fixed left-4 top-4 z-50">
-      <a href="menu.html" class="text-white bg-slate-800/60 px-3 py-2 rounded-md hover:bg-slate-800 transition">Menu</a>
-    </nav>
+    <!-- Top-left Menu removed from landing page to keep intro focused -->
 
-    <!-- Animated intro: big logo that morphs into the start panel -->
-    <div id="greeting" class="fixed inset-0 flex items-center justify-center bg-gradient-to-b from-slate-900/70 to-transparent z-40">
+  <!-- Animated intro: big logo that morphs into the start panel -->
+  <div id="greeting" class="fixed inset-0 flex items-center justify-center z-40" style="background: linear-gradient(180deg, rgba(2,6,10,0.85), rgba(2,6,10,0.6));">
       <div id="logoStage" class="flex flex-col items-center gap-6 pointer-events-none">
-        <img id="gameLogo" src="assets/Gemini_Generated_logo_fall_background.png" alt="logo" class="w-[600px] max-w-[90vw] will-change-transform" />
-        <div id="startPanel" class="mt-4 flex gap-3 opacity-0 scale-95 pointer-events-none">
-          <button id="startBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-md">Start</button>
-          <button id="creditsBtn" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-md">Credits</button>
+  <img id="gameLogo" src="assets/Gemini_Generated_logo_fall_background.png" alt="logo" class="w-[600px] max-w-[90vw] will-change-transform" />
+  <div id="landingTitle" class="landing-title" style="opacity:0;pointer-events:none;">The Leaf Long Journey</div>
+    <div id="startPanel" class="mt-6 flex items-center justify-center opacity-0 scale-95 pointer-events-none">
+          <div class="frosted-panel" role="group" aria-label="Start controls">
+            <div class="btn-group">
+              <div class="action-item" style="width:100%;display:flex;flex-direction:column;align-items:center">
+                <button id="startBtn" class="btn-primary" data-section="start">Start</button>
+                <div class="panel-content motion-hidden" aria-live="polite">
+                  <div class="content-inner" style="display:none"></div>
+                </div>
+              </div>
+
+              <div class="action-item" style="width:100%;display:flex;flex-direction:column;align-items:center">
+                <button id="controlsBtn" class="btn-ghost" title="Controls" data-section="controls">⚙️ Controls</button>
+                <div class="panel-content motion-hidden" aria-live="polite">
+                  <div class="content-inner" style="display:none"></div>
+                </div>
+              </div>
+
+              <div class="action-item" style="width:100%;display:flex;flex-direction:column;align-items:center">
+                <button id="creditsBtn" class="btn-ghost" data-section="credits">Credits</button>
+                <div class="panel-content motion-hidden" aria-live="polite">
+                  <div class="content-inner" style="display:none"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Controls overlay (hidden until controlsBtn clicked) -->
+        <div id="controlsOverlay" style="position:fixed;left:50%;top:60%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.8);padding:18px;border-radius:12px;color:#fff;display:none;z-index:100100;max-width:90vw;">
+          <h4 style="margin:0 0 8px 0">Controls</h4>
+          <div style="font-size:14px;line-height:1.5">WASD — move<br>Shift — sprint<br>Space — jump<br>Mouse — look (click to lock)</div>
+          <div style="margin-top:12px;text-align:right"><button id="closeControls" class="btn-ghost">Close</button></div>
         </div>
       </div>
     </div>
@@ -94,11 +121,99 @@
           await motionLib.animate(logo, { opacity: [0,1], scale: [0.85, 1.08, 1] }, { duration: 0.9, easing: 'spring(500,30,10)' });
           await new Promise(r => setTimeout(r, 420));
           await motionLib.animate(logo, { translateY: [0, -180], scale: [1, 0.24] }, { duration: 0.85, easing: 'ease-in-out' });
+          // show landing title after logo movement finishes
+          const titleEl = document.getElementById('landingTitle');
+          try {
+            await motionLib.animate(titleEl, { opacity: [0,1], translateY: [12, 0] }, { duration: 420, easing: 'ease-out' }).finished;
+          } catch (e) { /* ignore title animation errors */ }
           motionLib.animate(logo, { opacity: [1, 0.98] }, { duration: 0.5 });
           motionLib.animate(panel, { opacity: [0,1], y: [12,0], scale: [0.98,1] }, { duration: 0.5, easing: 'ease' });
           panel.style.pointerEvents = 'auto';
-          document.getElementById('startBtn').addEventListener('click', () => { window.location.href = 'menu.html'; });
-          document.getElementById('creditsBtn').addEventListener('click', () => { alert('Credits:\nPrototype by you. Assets: user-provided GLBs.'); });
+
+          // per-button panel logic: open only the panel directly under the clicked button
+          const actionItems = document.querySelectorAll('.action-item');
+
+          // generic open/close helpers that operate on a specific panel element
+          async function openPanel(panelContent, inner) {
+            inner.style.display = 'block';
+            const h = inner.getBoundingClientRect().height;
+            const hPx = `${Math.round(h)}px`;
+            panelContent.style.height = '0px';
+            panelContent.classList.remove('motion-hidden');
+            panelContent.classList.add('motion-visible');
+            try { await motionLib.animate(panelContent, { height: ['0px', hPx], opacity: [0,1], transform: ['translateY(-6px)','translateY(0)'] }, { duration: 320 }).finished; } catch(e){}
+            panelContent.style.height = 'auto';
+          }
+
+          async function closePanel(panelContent, inner) {
+            const h = panelContent.getBoundingClientRect().height;
+            const hPx = `${Math.round(h)}px`;
+            try { await motionLib.animate(panelContent, { height: [hPx, '0px'], opacity: [1,0], transform: ['translateY(0)','translateY(-6px)'] }, { duration: 260 }).finished; } catch(e){}
+            inner.style.display = 'none';
+            panelContent.classList.remove('motion-visible');
+            panelContent.classList.add('motion-hidden');
+            panelContent.style.height = '';
+          }
+
+          // close all other panels except the one provided
+          async function closeOthers(exceptPanel) {
+            const panels = document.querySelectorAll('.action-item .panel-content');
+            for (const p of panels) {
+              if (p === exceptPanel) continue;
+              const inner = p.querySelector('.content-inner');
+              if (p.classList.contains('motion-visible')) await closePanel(p, inner);
+              p.dataset.section = '';
+            }
+          }
+
+          // attach handlers per action item
+          actionItems.forEach((item) => {
+            const btn = item.querySelector('button');
+            const panel = item.querySelector('.panel-content');
+            const inner = item.querySelector('.content-inner');
+            const section = btn && btn.dataset && btn.dataset.section ? btn.dataset.section : '';
+            if (!btn || !panel || !inner) return;
+
+            btn.addEventListener('click', async (e) => {
+              // toggle: if open and same section, close
+              if (panel.classList.contains('motion-visible') && panel.dataset.section === section) {
+                await closePanel(panel, inner);
+                panel.dataset.section = '';
+                return;
+              }
+              // close others first
+              await closeOthers(panel);
+              panel.dataset.section = section;
+
+              // inject content based on section
+              if (section === 'controls') {
+                inner.innerHTML = '<strong>Controls</strong><div style="margin-top:8px">WASD — move<br>Shift — sprint<br>Space — jump<br>Click to lock pointer</div>';
+              } else if (section === 'credits') {
+                inner.innerHTML = '<strong>Credits</strong><div style="margin-top:8px">Prototype by singhdhruv_<br>Assets: user-provided GLBs and textures.<br>Motion shim and local styles by the prototype.</div>';
+              } else if (section === 'start') {
+                inner.innerHTML = '<strong>Begin your journey</strong><div style="margin-top:8px">Press <em>Play Now</em> to go to the world selector.</div><div style="margin-top:12px;text-align:center"><button class="btn-primary playNow">Play Now</button></div>';
+              }
+
+              await openPanel(panel, inner);
+
+              // attach the Play Now handler if present inside this inner
+              const playNow = inner.querySelector('.playNow');
+              if (playNow) playNow.addEventListener('click', async () => {
+                // animate page fade-out, then navigate
+                try {
+                  if (motionLib && motionLib.animate) {
+                    await motionLib.animate(document.getElementById('greeting') || document.body, { opacity: [1,0], filter: ['blur(0px)','blur(4px)'] }, { duration: 420 }).finished;
+                  } else {
+                    (document.getElementById('greeting') || document.body).style.opacity = '0';
+                  }
+                } catch (e) { /* ignore animation errors */ }
+                window.location.href = 'menu.html';
+              });
+            });
+          });
+
+          // Controls overlay close
+          document.getElementById('closeControls').addEventListener('click', () => { const o = document.getElementById('controlsOverlay'); if (o) o.style.display = 'none'; });
         } catch (err) { console.warn('Logo intro failed', err); }
       })();
     </script>

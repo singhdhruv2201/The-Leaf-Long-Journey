@@ -105,29 +105,12 @@ scene.background = null;
     __initialNightMode = (saved === 'night');
   } catch (e) { __initialNightMode = false; }
 
-  // Add a bottom-left mode toggle button to switch between day/night backgrounds
-  const modeBtn = document.createElement('button');
-  modeBtn.id = 'ptr-mode-btn';
-  modeBtn.title = 'Toggle night mode';
-  // internal boolean state for mode (avoid fragile string comparisons on computed style)
+  // Add a bottom-left mode toggle buttons to switch between day/night backgrounds
+  // Only create the UI controls when a 3D environment is actually loaded (selectedEnv present).
+  let dayBtn = null;
+  let nightBtn = null;
+  let afternoonBtn = null;
   let isNight = __initialNightMode;
-  // minimal inline styles so the button appears over the canvas
-  Object.assign(modeBtn.style, {
-    position: 'fixed',
-    left: '12px',
-    bottom: '12px',
-    padding: '8px 10px',
-    background: 'rgba(0,0,0,0.6)',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '6px',
-    zIndex: '100002',
-    cursor: 'pointer',
-    fontFamily: 'sans-serif',
-    fontSize: '13px'
-  });
-  document.body.appendChild(modeBtn);
-  // toggle handler
   function setNightMode(on) {
     try {
       if (on) {
@@ -135,7 +118,8 @@ scene.background = null;
         document.body.style.background = NIGHT_BG;
         localStorage.setItem('ptr_bg_mode', 'night');
         isNight = true;
-        modeBtn.textContent = 'Switch to Day';
+        try { if (nightBtn) nightBtn.setAttribute('aria-pressed', 'true'); } catch (e) {}
+        try { if (dayBtn) dayBtn.setAttribute('aria-pressed', 'false'); } catch (e) {}
         try { if (ambient) { ambient.color.set(0x172136); ambient.intensity = 0.40; } } catch (e) {}
         try { if (hemi) { hemi.color.set(0x223244); hemi.groundColor.set(0x071018); hemi.intensity = 0.28; } } catch (e) {}
         try { if (dirLight) { dirLight.color.set(0xa3bff4); dirLight.intensity = 0.7; } } catch (e) {}
@@ -145,8 +129,9 @@ scene.background = null;
         // day visuals
         document.body.style.background = DAY_BG;
         localStorage.setItem('ptr_bg_mode', 'day');
-        isNight = false;
-        modeBtn.textContent = 'Switch to Night';
+  isNight = false;
+  try { if (nightBtn) nightBtn.setAttribute('aria-pressed', 'false'); } catch (e) {}
+  try { if (dayBtn) dayBtn.setAttribute('aria-pressed', 'true'); } catch (e) {}
         try { if (ambient) { ambient.color.set(0xffe1b3); ambient.intensity = 0.6; } } catch (e) {}
         try { if (hemi) { hemi.color.set(0xffc98d); hemi.groundColor.set(0x332211); hemi.intensity = 0.5; } } catch (e) {}
         try { if (dirLight) { dirLight.color.set(0xffd6a3); dirLight.intensity = 2.0; } } catch (e) {}
@@ -155,35 +140,6 @@ scene.background = null;
       }
     } catch (e) { /* ignore storage errors */ }
   }
-  // set initial button label based on starting mode
-  modeBtn.textContent = isNight ? 'Switch to Day' : 'Switch to Night';
-  modeBtn.addEventListener('click', (e) => {
-    try {
-      // start a smooth transition instead of an instant swap
-      startModeTransition(!isNight, 0.7);
-    } catch (err) { /* ignore */ }
-  });
-
-  // Afternoon mode button (bottom-left)
-  const afternoonBtn = document.createElement('button');
-  afternoonBtn.textContent = 'Afternoon';
-  afternoonBtn.style.position = 'fixed';
-  afternoonBtn.style.left = '12px';
-  // move the Afternoon button up so it doesn't overlap the mode toggle
-  afternoonBtn.style.bottom = '48px';
-  afternoonBtn.style.padding = '8px 10px';
-  afternoonBtn.style.background = 'rgba(30,144,255,0.9)';
-  afternoonBtn.style.color = '#fff';
-  afternoonBtn.style.border = 'none';
-  afternoonBtn.style.borderRadius = '6px';
-  afternoonBtn.style.zIndex = '100002';
-  afternoonBtn.style.cursor = 'pointer';
-  afternoonBtn.style.fontFamily = 'sans-serif';
-  afternoonBtn.style.fontSize = '13px';
-  document.body.appendChild(afternoonBtn);
-  afternoonBtn.addEventListener('click', () => {
-    try { startAfternoonTransition(0.6); } catch (e) { console.warn(e); }
-  });
 
 // pointer lock state flags
 let pointerIsLocked = false;
@@ -396,22 +352,8 @@ if (selectedEnv) {
 } else {
   // No environment requested — the page should have redirected to menu.html, but handle
   // the case where the user opened index.html directly in the browser or disabled JS.
-  console.log('No environment selected; please open menu.html to choose an environment.');
-  try {
-    const noEnvNotice = document.createElement('div');
-    noEnvNotice.style.position = 'fixed';
-    noEnvNotice.style.left = '50%';
-    noEnvNotice.style.top = '40%';
-    noEnvNotice.style.transform = 'translate(-50%,-50%)';
-    noEnvNotice.style.background = 'rgba(0,0,0,0.7)';
-    noEnvNotice.style.color = '#fff';
-    noEnvNotice.style.padding = '18px 20px';
-    noEnvNotice.style.fontFamily = 'sans-serif';
-    noEnvNotice.style.borderRadius = '8px';
-    noEnvNotice.style.zIndex = '100010';
-    noEnvNotice.innerHTML = '<strong>No environment selected</strong><div style="margin-top:8px">Please open <a href="menu.html" style="color:#fff;text-decoration:underline">the Menu</a> and choose an environment to start the game.</div>';
-    document.body.appendChild(noEnvNotice);
-  } catch (e) { /* ignore DOM errors */ }
+  console.log('No environment selected; landing page active.');
+  // No environment notice removed to keep the landing page clean. Use the Menu page to choose environments.
 }
 // texture loader for road
 const texLoader = new THREE.TextureLoader();
@@ -428,23 +370,7 @@ texLoader.load('assets/Untitled_0.png', (tex) => {
   console.log('Road texture loaded');
 }, undefined, (err) => { console.warn('Failed to load road texture:', err); });
 
-  // Add a small HUD label to show the selected environment and a Menu link
-  try {
-    const envHud = document.createElement('div');
-    envHud.id = 'ptr-env-hud';
-    envHud.style.position = 'fixed';
-    envHud.style.left = '12px';
-    envHud.style.top = '12px';
-    envHud.style.padding = '6px 10px';
-    envHud.style.background = 'rgba(0,0,0,0.45)';
-    envHud.style.color = '#fff';
-    envHud.style.fontFamily = 'sans-serif';
-    envHud.style.fontSize = '13px';
-    envHud.style.borderRadius = '6px';
-    envHud.style.zIndex = '100003';
-    envHud.innerHTML = `<strong>Environment:</strong> ${selectedEnv} &nbsp; <a href="menu.html" style="color:#fff;text-decoration:underline;margin-left:8px">Menu</a>`;
-    document.body.appendChild(envHud);
-  } catch (e) { /* ignore HUD creation errors */ }
+  // Environment HUD removed per UX request (no env name shown on top-left)
 
 // --- Model loading area ---
 // Loading of `assets/scene.gltf` is currently disabled because that file
@@ -475,7 +401,8 @@ try {
   }
 } catch (e) { /* ignore */ }
 
-gltfLoader.load(envModelPath, (gltf) => {
+if (envModelPath) {
+  gltfLoader.load(envModelPath, (gltf) => {
   console.log('Environment GLTF loaded:', selectedEnv, gltf);
   roadModel = gltf.scene.clone();
   // auto-scale and center road model if necessary
@@ -647,6 +574,61 @@ gltfLoader.load(envModelPath, (gltf) => {
   }
   console.log('Road positioning: sceneGroundY=', sceneGroundY, 'roadModel.position.y=', roadModel.position.y, 'finalBbox.min.y=', finalBbox.min.y);
   scene.add(roadModel);
+  // Create and append the mode / afternoon buttons only when an environment is loaded.
+  try {
+    if (selectedEnv) {
+      // Create separate Day and Night circular buttons (match menu button size/color)
+  // Day button (toggle to day)
+      dayBtn = document.createElement('button');
+      dayBtn.id = 'ptr-day-btn';
+      dayBtn.title = 'Switch to Day';
+      dayBtn.textContent = '🌤️';
+      Object.assign(dayBtn.style, {
+        position: 'fixed', left: '72px', bottom: '12px', width: '48px', height: '48px', padding: '0', background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '999px', zIndex: '100002', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px'
+      });
+      dayBtn.setAttribute('aria-label', 'Switch to day');
+      document.body.appendChild(dayBtn);
+      dayBtn.addEventListener('click', (e) => { try { startModeTransition(false, 0.7); } catch (err) {} });
+
+  // Night button (toggle to night) — place above the day button
+      nightBtn = document.createElement('button');
+      nightBtn.id = 'ptr-night-btn';
+      nightBtn.title = 'Switch to Night';
+      nightBtn.textContent = '🌙';
+      Object.assign(nightBtn.style, {
+        position: 'fixed', left: '132px', bottom: '12px', width: '48px', height: '48px', padding: '0', background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '999px', zIndex: '100002', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px'
+      });
+      nightBtn.setAttribute('aria-label', 'Switch to night');
+      document.body.appendChild(nightBtn);
+      nightBtn.addEventListener('click', (e) => { try { startModeTransition(true, 0.7); } catch (err) {} });
+
+      // Afternoon button only for in-game exploration — make it a circular button matching the menu button
+      afternoonBtn = document.createElement('button');
+      afternoonBtn.id = 'ptr-afternoon-btn';
+      // Use the sun emoji as the label and center it
+      afternoonBtn.textContent = '☀️';
+      Object.assign(afternoonBtn.style, {
+        position: 'fixed', left: '12px', bottom: '12px', width: '48px', height: '48px', padding: '0', background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '999px', zIndex: '100004', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px'
+      });
+      // ensure the emoji remains visible on dark background
+      afternoonBtn.setAttribute('aria-label', 'Afternoon mode');
+      document.body.appendChild(afternoonBtn);
+      afternoonBtn.addEventListener('click', () => { try { startAfternoonTransition(0.6); } catch (e) { console.warn(e); } });
+
+      // Top-left circular menu button
+      const circleMenuBtn = document.createElement('button');
+      circleMenuBtn.id = 'ptr-circle-menu';
+      circleMenuBtn.title = 'Menu';
+      Object.assign(circleMenuBtn.style, {
+        position: 'fixed', left: '12px', top: '12px', width: '48px', height: '48px', padding: '8px', background: 'rgba(20, 20, 20, 0.6)', color: '#fff', border: 'none', borderRadius: '999px', zIndex: '100005', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+      });
+      // insert SVG icon centered (keep inverted so it appears white)
+      const img = document.createElement('img'); img.src = 'assets/svg/menu.svg'; img.alt = 'Menu'; img.style.width = '24px'; img.style.height = '24px'; img.style.display = 'block'; img.style.filter = 'invert(0)';
+      circleMenuBtn.appendChild(img);
+      circleMenuBtn.addEventListener('click', () => { window.location.href = 'menu.html'; });
+      document.body.appendChild(circleMenuBtn);
+    }
+  } catch (e) { /* ignore UI creation errors */ }
   // Debug: compute world bbox after adding and log useful info
   try {
     const worldBbox = new THREE.Box3().setFromObject(roadModel);
@@ -805,7 +787,7 @@ gltfLoader.load(envModelPath, (gltf) => {
       roadModel.userData._deferredAddTrimesh = addRoadTrimesh;
     }
   } catch (e) { console.warn('Failed to add road trimesh to physics world', e); }
-}, (xhr) => {
+  }, (xhr) => {
   try {
     // xhr.loaded/xhr.total may be undefined for some loaders; guard and show percent when available
     const hud = document.getElementById('ptr-load-hud');
@@ -818,7 +800,11 @@ gltfLoader.load(envModelPath, (gltf) => {
       }
     }
   } catch (e) {}
-}, (err) => { console.warn('Failed to load road model:', err); });
+  }, (err) => { console.warn('Failed to load road model:', err); });
+} else {
+  // No environment selected — skip GLTF loading to avoid loader errors when envModelPath is null
+  console.log('Skipping GLTF load: envModelPath is not set.');
+}
 
 // (recruiter group and preview removed)
 
@@ -1199,221 +1185,9 @@ scene.add(camera);
   let smoothedYaw = yaw;
   let smoothedPitch = pitch;
 
-  // Debug overlay (DOM) to display camera/player heights for tuning
-  const debugOverlay = document.createElement('div');
-  debugOverlay.style.position = 'fixed';
-  debugOverlay.style.right = '12px';
-  debugOverlay.style.top = '12px';
-  debugOverlay.style.padding = '8px 10px';
-  debugOverlay.style.background = 'rgba(0,0,0,0.55)';
-  debugOverlay.style.color = '#fff';
-  debugOverlay.style.fontFamily = 'monospace';
-  debugOverlay.style.fontSize = '12px';
-  debugOverlay.style.borderRadius = '6px';
-  debugOverlay.style.zIndex = '100000';
-  debugOverlay.style.pointerEvents = 'none';
-  debugOverlay.style.display = 'none'; // hidden by default
-  debugOverlay.id = 'ptr-debug-overlay';
-  document.body.appendChild(debugOverlay);
-
-  // Persistent coordinate HUD (shows player's world position)
-  const coordsHud = document.createElement('div');
-  coordsHud.id = 'ptr-coords-hud';
-  coordsHud.style.position = 'fixed';
-  coordsHud.style.left = '12px';
-  coordsHud.style.top = '48px';
-  coordsHud.style.padding = '6px 10px';
-  coordsHud.style.background = 'rgba(0,0,0,0.35)';
-  coordsHud.style.color = '#fff';
-  coordsHud.style.fontFamily = 'monospace';
-  coordsHud.style.fontSize = '12px';
-  coordsHud.style.borderRadius = '6px';
-  coordsHud.style.zIndex = '100004';
-  coordsHud.textContent = 'pos: --, --, --';
-  document.body.appendChild(coordsHud);
-
-  let debugOverlayVisible = false;
-  // Toggle overlay with backquote (`) key
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'Backquote') {
-      debugOverlayVisible = !debugOverlayVisible;
-      debugOverlay.style.display = debugOverlayVisible ? 'block' : 'none';
-    }
-  });
-
-  // Visible debug toggle button for users without easy keyboard access
-  const debugToggleBtn = document.createElement('button');
-  debugToggleBtn.textContent = 'Debug';
-  debugToggleBtn.style.position = 'fixed';
-  debugToggleBtn.style.right = '12px';
-  debugToggleBtn.style.bottom = '12px';
-  debugToggleBtn.style.padding = '8px 10px';
-  debugToggleBtn.style.background = 'rgba(0,0,0,0.6)';
-  debugToggleBtn.style.color = '#fff';
-  debugToggleBtn.style.border = 'none';
-  debugToggleBtn.style.borderRadius = '6px';
-  debugToggleBtn.style.zIndex = '100001';
-  debugToggleBtn.style.cursor = 'pointer';
-  debugToggleBtn.style.fontFamily = 'sans-serif';
-  debugToggleBtn.style.fontSize = '12px';
-  document.body.appendChild(debugToggleBtn);
-  debugToggleBtn.addEventListener('click', () => {
-    debugOverlayVisible = !debugOverlayVisible;
-    debugOverlay.style.display = debugOverlayVisible ? 'block' : 'none';
-    // enable pointer interactions only when overlay visible
-    debugOverlay.style.pointerEvents = debugOverlayVisible ? 'auto' : 'none';
-  });
-
-  // Collision debug: show/hide baked world-space collision geometry in bright red
-  let collisionDebugGroup = null;
-  let collisionDebugVisible = false;
-  function disposeGroup(g) {
-    try {
-      g.traverse((o) => {
-        if (o.isMesh) {
-          try { o.geometry.dispose(); } catch (e) {}
-          try { o.material.dispose(); } catch (e) {}
-        }
-      });
-    } catch (e) {}
+  if (selectedEnv) {
+    // Debug UI removed for production build: No-clip, collision debug, and debug overlay removed
   }
-
-  function toggleCollisionDebug() {
-    try {
-      collisionDebugVisible = !collisionDebugVisible;
-      if (!collisionDebugVisible) {
-        if (collisionDebugGroup) {
-          try { scene.remove(collisionDebugGroup); } catch (e) {}
-          disposeGroup(collisionDebugGroup);
-          collisionDebugGroup = null;
-        }
-        console.log('Collision debug: hidden');
-        return;
-      }
-
-      if (!roadModel) {
-        console.warn('Collision debug: no roadModel available to bake');
-        collisionDebugVisible = false;
-        return;
-      }
-
-      // Bake world-space geometry from roadModel
-      collisionDebugGroup = new THREE.Group();
-      roadModel.updateWorldMatrix(true, true);
-      roadModel.traverse((c) => {
-        if (c.isMesh && c.geometry && c.geometry.isBufferGeometry) {
-          try {
-            const geom = c.geometry.clone();
-            // transform geometry into world-space so debug group can be identity
-            geom.applyMatrix4(c.matrixWorld);
-            // create a bright red translucent material (and an optional wireframe)
-            const mat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthTest: true });
-            const mesh = new THREE.Mesh(geom, mat);
-            mesh.renderOrder = 10000; // draw on top when possible
-            collisionDebugGroup.add(mesh);
-
-            // wireframe overlay for clearer edges
-            try {
-              const edges = new THREE.EdgesGeometry(geom, 1);
-              const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xff6666, linewidth: 1 }));
-              collisionDebugGroup.add(line);
-            } catch (e) {}
-          } catch (e) { /* ignore mesh bake errors */ }
-        }
-      });
-      scene.add(collisionDebugGroup);
-      console.log('Collision debug: shown (red overlay)');
-    } catch (e) { console.warn('toggleCollisionDebug failed', e); }
-  }
-
-  // UI button to toggle collision debug next to existing debug button
-  const collDebugBtn = document.createElement('button');
-  collDebugBtn.textContent = 'Show Colliders';
-  collDebugBtn.style.position = 'fixed';
-  collDebugBtn.style.right = '12px';
-  collDebugBtn.style.bottom = '54px';
-  collDebugBtn.style.padding = '8px 10px';
-  collDebugBtn.style.background = 'rgba(128,0,0,0.75)';
-  collDebugBtn.style.color = '#fff';
-  collDebugBtn.style.border = 'none';
-  collDebugBtn.style.borderRadius = '6px';
-  collDebugBtn.style.zIndex = '100001';
-  collDebugBtn.style.cursor = 'pointer';
-  collDebugBtn.style.fontFamily = 'sans-serif';
-  collDebugBtn.style.fontSize = '12px';
-  document.body.appendChild(collDebugBtn);
-  collDebugBtn.addEventListener('click', () => {
-    toggleCollisionDebug();
-    collDebugBtn.textContent = collisionDebugVisible ? 'Hide Colliders' : 'Show Colliders';
-  });
-
-  // No-clip (disable collisions for player) toggle + keyboard shortcut
-  let noClip = false;
-  let noClipY = null;
-  const noclipBtn = document.createElement('button');
-  noclipBtn.textContent = 'No-Clip: OFF';
-  noclipBtn.style.position = 'fixed';
-  noclipBtn.style.right = '12px';
-  noclipBtn.style.bottom = '94px';
-  noclipBtn.style.padding = '8px 10px';
-  noclipBtn.style.background = 'rgba(0,96,96,0.75)';
-  noclipBtn.style.color = '#fff';
-  noclipBtn.style.border = 'none';
-  noclipBtn.style.borderRadius = '6px';
-  noclipBtn.style.zIndex = '100001';
-  noclipBtn.style.cursor = 'pointer';
-  noclipBtn.style.fontFamily = 'sans-serif';
-  noclipBtn.style.fontSize = '12px';
-  document.body.appendChild(noclipBtn);
-  function setNoClip(enabled) {
-    noClip = !!enabled;
-    noclipBtn.textContent = noClip ? 'No-Clip: ON' : 'No-Clip: OFF';
-    if (!playerBody) return;
-    try {
-      if (noClip) {
-        // remember current Y to keep player at this height while noclip is active
-        noClipY = playerBody.position.y;
-        playerBody.collisionResponse = false;
-        playerBody.linearDamping = 0.0;
-      } else {
-        playerBody.collisionResponse = true;
-        playerBody.linearDamping = 0.06;
-        noClipY = null;
-      }
-    } catch (e) { /* ignore */ }
-  }
-  noclipBtn.addEventListener('click', () => setNoClip(!noClip));
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'KeyN') {
-      setNoClip(!noClip);
-    }
-  });
-
-  // Add a clearance slider control into the overlay (but keep pointerEvents off by default).
-  // We'll enable pointerEvents on the slider container so it can be used when visible.
-  const sliderWrap = document.createElement('div');
-  sliderWrap.style.marginTop = '8px';
-  sliderWrap.style.pointerEvents = 'auto';
-  sliderWrap.innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;">
-      <label style="font-size:12px;white-space:nowrap;">Clearance</label>
-      <input id="ptr-clearance-range" type="range" min="0" max="1" step="0.01" value="0.30" style="width:140px;" />
-      <span id="ptr-clearance-val" style="min-width:40px;text-align:right">0.30m</span>
-      <button id="ptr-clearance-apply" style="margin-left:6px;font-size:11px;">Apply</button>
-    </div>`;
-  debugOverlay.appendChild(sliderWrap);
-  const clearanceRange = sliderWrap.querySelector('#ptr-clearance-range');
-  const clearanceVal = sliderWrap.querySelector('#ptr-clearance-val');
-  const clearanceApply = sliderWrap.querySelector('#ptr-clearance-apply');
-  clearanceRange.addEventListener('input', (ev) => {
-    const v = parseFloat(ev.target.value);
-    clearanceVal.textContent = v.toFixed(2) + 'm';
-    userClearance = v;
-  });
-  clearanceApply.addEventListener('click', (ev) => {
-    if (userClearance === null) return;
-    applyClearanceNow(userClearance);
-  });
 
   // keyboard
   window.addEventListener('keydown', (e) => {
@@ -1517,9 +1291,12 @@ scene.add(camera);
       Object.assign(startOverlay.style, { position: 'fixed', inset: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.45)', zIndex: '100005' });
       const startBox = document.createElement('div');
       Object.assign(startBox.style, { background: 'rgba(255,255,255,0.04)', padding: '18px 20px', borderRadius: '10px', color: '#fff', textAlign: 'center', fontFamily: 'sans-serif' });
-      startBox.innerHTML = `<div style="font-size:20px;font-weight:600;margin-bottom:8px">Ready — ${selectedEnv}</div><div style="margin-bottom:12px;color:#cbd5e1">Click to play. Your cursor will be locked for mouse-look. Press ESC to release.</div>`;
-      const startBtn = document.createElement('button');
-      startBtn.textContent = 'Click to Play';
+  // Display a clean environment name (capitalize words and replace separators)
+  const envNameRaw = String(selectedEnv || 'Environment');
+  const displayName = envNameRaw.replace(/[-_]/g, ' ').split(' ').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+  startBox.innerHTML = `<div style="font-size:20px;font-weight:600;margin-bottom:8px">${displayName}</div><div style="margin-bottom:12px;color:#cbd5e1">Click to play. Your cursor will be locked for mouse-look. Press ESC to release.</div>`;
+  const startBtn = document.createElement('button');
+  startBtn.textContent = 'Play';
       Object.assign(startBtn.style, { padding: '10px 14px', fontSize: '14px', borderRadius: '8px', background: 'linear-gradient(180deg,#1f2937,#111827)', color: '#fff', border: 'none', cursor: 'pointer' });
       startBox.appendChild(startBtn);
   // small loader HUD inside the overlay to show loading progress
@@ -1870,33 +1647,9 @@ gltfLoader.load('assets/man_in_a_suit.glb', (gltf) => {
     camera.rotation.x = smoothedPitch;
   } catch (e) { /* defensive: player might not be defined early */ }
 
-  // update debug overlay if visible
-  try {
-    if (debugOverlay && debugOverlayVisible) {
-      let playerY = 'n/a';
-      let feetY = 'n/a';
-      let camLocalY = 'n/a';
-      let camWorldY = 'n/a';
-      if (playerBody) playerY = playerBody.position.y.toFixed(3);
-      if (playerBody) feetY = (playerBody.position.y - (PLAYER_HEIGHT / 2)).toFixed(3);
-      if (camera) camLocalY = camera.position.y.toFixed(3);
-      if (camera) {
-        const cw = new THREE.Vector3(); camera.getWorldPosition(cw); camWorldY = cw.y.toFixed(3);
-      }
-      debugOverlay.innerHTML = `playerBody.y: ${playerY}<br/>feetY: ${feetY}<br/>camLocalY: ${camLocalY}<br/>camWorldY: ${camWorldY}<br/>lastSnapClearance: ${lastSnapClearance === null ? 'n/a' : lastSnapClearance.toFixed(3)}`;
-    }
-  } catch (e) { /* ignore overlay errors */ }
+  // debug overlay removed
 
-  // update persistent coordinate HUD (always visible)
-  try {
-    let wx = 0, wy = 0, wz = 0;
-    if (playerBody) {
-      wx = playerBody.position.x; wy = playerBody.position.y; wz = playerBody.position.z;
-    } else if (player) {
-      const wp = new THREE.Vector3(); player.getWorldPosition(wp); wx = wp.x; wy = wp.y; wz = wp.z;
-    }
-    if (coordsHud) coordsHud.textContent = `pos: ${wx.toFixed(3)}, ${wy.toFixed(3)}, ${wz.toFixed(3)}`;
-  } catch (e) { /* ignore coords update errors */ }
+    // Coordinate HUD update removed (no 'pos:' UI element present)
 
   // update falling leaves
   try {

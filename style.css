@@ -1,6 +1,6 @@
 * { box-sizing: border-box; }
 html,body { height: 100%; margin: 0; }
-body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; background: #0b0f14; color: #e6eef8; }
+body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; background: var(--bg-slate-900, #0b0f14); color: #e6eef8; }
 @font-face {
 	font-family: 'GratefulMemories';
 		src: url('text/Grateful_Memories.otf') format('opentype');
@@ -16,7 +16,7 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; backgro
 .landingInner { text-align: center; color: white; margin-bottom: 28px; }
 #logoWrap { display: inline-block; transform-origin: center; }
 #logoLine1 { font-family: 'GratefulMemories', system-ui, Arial; font-size: 64px; color: #ffffff; line-height: 0.9; }
-#logoLine2 { font-family: 'Times New Roman', Times, serif; font-size: 64px; color: #ffd1a3; margin-top: 6px; }
+#logoLine2 { font-family: 'Times New Roman', Times, serif; font-size: 64px; color: var(--brand-amber, #ffd1a3); margin-top: 6px; }
 /* New image-based logo */
 #logoImg { display: block; max-width: 86vw; width: 920px; height: auto; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0,0,0,0.6)); }
 #tagline { margin-top: 10px; color: rgba(255,255,255,0.85); }
@@ -34,14 +34,14 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; backgro
 
 /* Bottom action button */
 #gameActions { position: absolute; left: 50%; transform: translateX(-50%); bottom: 20px; z-index: 15; display: none; }
-#gameActions .action { background: #ff4d4d; color: white; border: none; padding: 14px 26px; font-size: 18px; border-radius: 999px; cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+#gameActions .action { background: var(--brand-crimson, #ff4d4d); color: white; border: none; padding: 14px 26px; font-size: 18px; border-radius: 999px; cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
 
 /* Gloves UI removed */
 
 /* Attach 3D health label styles (renders via CSS2DRenderer) */
 .health-label .labelWrap { background: rgba(10,10,10,0.7); padding: 6px 10px; border-radius: 8px; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:140px; }
 .health-label .labelBar { width: 120px; height: 10px; background: rgba(255,255,255,0.12); border-radius: 6px; overflow: hidden; }
-.health-label .labelFill { width: 100%; height: 100%; background: linear-gradient(90deg,#ff5a5f,#ff9b4a); transition: width 200ms ease; }
+.health-label .labelFill { width: 100%; height: 100%; background: linear-gradient(90deg,var(--brand-crimson,#ff5a5f), var(--brand-amber,#ff9b4a)); transition: width 200ms ease; }
 .health-label .labelVal { font-weight:700; color:#fff; font-size:12px; }
 
 /* Debug controls removed */
