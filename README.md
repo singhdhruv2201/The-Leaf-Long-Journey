@@ -41,3 +41,55 @@ Credits
 
 License
 - This repository contains mixed content (user-provided assets). Check individual model credits before redistribution.
+
+## Run inside Electron (desktop)
+
+You can run the project as a desktop app with Electron for a self-contained experience.
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Start Electron:
+
+```bash
+npm start
+```
+
+The Electron main entry (`electron-main.js`) will load `index.html` from the project root. A small `preload.js` exposes `window.electronAPI.openExternal(url)` for opening external links from the web code.
+
+Note: If you see `npm run electron-dev` failing, ensure `electron` is installed (run `npm install`), and if you're on macOS you may need to grant permission to open the app the first time.
+
+Note about Tailwind
+
+The repository contains a `build:css` script for generating `assets/tailwind.css`. To avoid blocking `npm install` for developers who don't need to run the Tailwind build, the `tailwindcss` package was removed from `devDependencies`. If you need to rebuild the CSS, install a compatible Tailwind version and then run the build script:
+
+```bash
+# example: install a compatible Tailwind v3 version
+npm install -D tailwindcss@^3.4.0
+npm run build:css
+```
+
+Packaging a macOS DMG
+---------------------
+
+This repo includes an `electron-builder` configuration in `package.json` so you can create a macOS `.dmg` installer.
+
+1. Install dev dependencies (if you haven't already):
+
+```bash
+npm install
+```
+
+2. Build the DMG:
+
+```bash
+npm run dist
+```
+
+Notes:
+- Building a signed DMG and distributing via Gatekeeper requires Apple Developer signing keys and optional notarization. If you don't have a signing identity, `electron-builder` will still produce an unsigned `.dmg` in the `dist/` folder.
+- To sign and notarize: set the appropriate `CSC_LINK` / `CSC_KEY_PASSWORD` env vars or configure the mac `identity` in `package.json` build settings per `electron-builder` docs.
+- Building on macOS is recommended for macOS builds. Cross-building macOS packages from Linux/Windows is not supported for signed builds.

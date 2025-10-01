@@ -1,11 +1,43 @@
 {
   "name": "leaf-long-journey",
   "version": "0.1.0",
+  "main": "electron-main.js",
   "private": true,
+  
   "scripts": {
-    "build:css": "npx tailwindcss -i ./src/tailwind.input.css -o ./assets/tailwind.css --minify"
+    "build:css": "npx tailwindcss -i ./src/tailwind.input.css -o ./assets/tailwind.css --minify",
+    "start": "electron .",
+    "electron-dev": "electron .",
+    "dist": "electron-builder --mac",
+    "dist:win": "electron-builder --win"
   },
   "devDependencies": {
-    "tailwindcss": "^3.5.0"
+    "electron": "^26.0.0",
+    "electron-builder": "^24.6.0"
+  },
+  "build": {
+    "appId": "com.yourname.theleaflongjourney",
+    "productName": "The Leaf Long Journey",
+    "files": [
+      "**/*",
+      "!node_modules/**/*/{CHANGELOG.md,README.md,README,readme.md,readme}"
+    ],
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.games"
+    }
+    ,
+    "extraResources": [
+      {
+        "from": "assets/Gemini_Generated_logo_fall_background.png",
+        "to": "assets/Gemini_Generated_logo_fall_background.png",
+        "filter": ["**/*"]
+      }
+    ],
+    "icon": "assets/Gemini_Generated_logo_fall_background.png",
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "assets/Gemini_Generated_logo_fall_background.png"
+    }
   }
 }
