@@ -1008,11 +1008,39 @@ if (envModelPath) {
       }
     }
   } catch (e) {}
-  }, (err) => { console.warn('Failed to load road model:', err); });
+  }, (err) => { console.warn('Failed to load road model:', err); try { showModelLoadError(err); } catch (e) {} });
   } catch (e) { console.warn('GLTFLoader path set failed', e); }
 } else {
   // No environment selected — skip GLTF loading to avoid loader errors when envModelPath is null
   console.log('Skipping GLTF load: envModelPath is not set.');
+}
+
+// If a GLTF failed to load due to 404s from underscore-prefixed folders on GitHub Pages,
+// a common cause is Jekyll ignoring those folders. To mitigate, we add a .nojekyll file to
+// the repo (if not already present) and provide a helpful error HUD when a model 404s.
+try {
+  // No-op: the presence of .nojekyll file in the repo is handled at publish time.
+  // The file is already added to the workspace to encourage correct GitHub Pages deploys.
+} catch (e) {}
+
+// Improve the GLTF load failure notice: when the loader fails with a 404, show a friendly HUD
+function showModelLoadError(err) {
+  try {
+    console.warn('Model load failed:', err);
+    const hud = document.getElementById('ptr-load-hud');
+    if (hud) {
+      hud.textContent = 'Failed to load model (404). Check asset paths and GitHub Pages .nojekyll settings.';
+    }
+    // Also create a top-right sticky hint for debugging
+    const errDivId = 'ptr-model-error-hint';
+    if (!document.getElementById(errDivId)) {
+      const div = document.createElement('div');
+      div.id = errDivId;
+      Object.assign(div.style, { position: 'fixed', right: '12px', top: '12px', background: 'rgba(0,0,0,0.7)', color: '#fff', padding: '8px 10px', borderRadius: '8px', zIndex: '100010', fontSize: '13px' });
+      div.textContent = 'Model failed to load (404). If deploying to GitHub Pages, ensure .nojekyll is present so underscore folders are served.';
+      document.body.appendChild(div);
+    }
+  } catch (e) { console.warn('showModelLoadError failed', e); }
 }
 
 // (recruiter group and preview removed)
