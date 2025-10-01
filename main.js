@@ -159,6 +159,11 @@ let awaitingEnterOnLock = false; // set when user clicks the Start button and we
   let transitionDuration = 0.7; // seconds
   let transitionFromNight = false;
   let transitionToNight = false;
+  // support multi-target transitions (day, night, afternoon)
+  let transitionSource = null; // 'day' | 'night' | 'afternoon'
+  let transitionTarget = null; // 'day' | 'night' | 'afternoon'
+  // track whether we're currently in afternoon mode
+  let isAfternoon = false;
 
   function lerp(a, b, t) { return a + (b - a) * t; }
   function lerpColor(cFrom, cTo, t) {
@@ -176,6 +181,8 @@ let awaitingEnterOnLock = false; // set when user clicks the Start button and we
     transitionDuration = Math.max(0.05, durationSec);
     transitionFromNight = isNight;
     transitionToNight = !!toNight;
+  transitionSource = isAfternoon ? 'afternoon' : (isNight ? 'night' : 'day');
+    transitionTarget = transitionToNight ? 'night' : 'day';
     // To produce a clean crossfade: set the overlay to show the CURRENT background,
     // then immediately switch the body's background to the TARGET. Fade the overlay out
     // to reveal the target background under it.
@@ -203,13 +210,17 @@ let awaitingEnterOnLock = false; // set when user clicks the Start button and we
       // ensure overlay applied
       // eslint-disable-next-line no-unused-expressions
       bgOverlay.offsetHeight;
-      // set body background to a soft sky-blue for afternoon
+      // set body background to a soft sky-blue for afternoon (visual target)
       const AFTERNOON_BG = '#87CEEB'; // skyblue
       document.body.style.background = AFTERNOON_BG;
-      // apply the mode immediately
-      setAfternoonMode(true);
-      // fade overlay out
-      setTimeout(() => { try { bgOverlay.style.opacity = '0'; } catch (e) {} }, Math.max(10, Math.floor(durationSec * 1000)));
+      // start a smooth transition towards afternoon visuals
+      transitionActive = true;
+      transitionStart = (typeof clock !== 'undefined') ? clock.getElapsedTime() : (performance.now() / 1000);
+      transitionDuration = Math.max(0.05, durationSec);
+      transitionSource = isAfternoon ? 'afternoon' : (isNight ? 'night' : 'day');
+      transitionTarget = 'afternoon';
+      transitionFromNight = isNight;
+      transitionToNight = false;
     } catch (e) { console.warn('startAfternoonTransition failed', e); }
   }
 
@@ -346,6 +357,43 @@ function envToPath(env) {
     default: return 'assets/road.glb';
   }
 }
+
+// Start a transition to Day (useful for switching back from Afternoon)
+function startDayTransition(durationSec = 0.6) {
+  if (transitionActive) return;
+  transitionActive = true;
+  transitionStart = (typeof clock !== 'undefined') ? clock.getElapsedTime() : (performance.now() / 1000);
+  transitionDuration = Math.max(0.05, durationSec);
+  transitionFromNight = isNight;
+  transitionToNight = false;
+  transitionSource = isAfternoon ? 'afternoon' : (isNight ? 'night' : 'day');
+  transitionTarget = 'day';
+  // overlay crossfade: show current and set body to day background
+  try {
+    const currentBg = isNight ? NIGHT_BG : (isAfternoon ? '#87CEEB' : DAY_BG);
+    bgOverlay.style.background = currentBg;
+    bgOverlay.style.opacity = '1';
+    // force reflow
+    // eslint-disable-next-line no-unused-expressions
+    bgOverlay.offsetHeight;
+    document.body.style.background = DAY_BG;
+  } catch (e) { /* ignore */ }
+}
+
+// Toggle Afternoon on/off (exposed to UI)
+function toggleAfternoon() {
+  try {
+    if (isAfternoon) {
+      // go back to day
+      startDayTransition(0.6);
+    } else {
+      startAfternoonTransition(0.6);
+    }
+  } catch (e) { console.warn('toggleAfternoon failed', e); }
+}
+
+// expose toggle helper for UI or debugging
+try { window.toggleAfternoon = toggleAfternoon; } catch (e) {}
 let envModelPath = null;
 if (selectedEnv) {
   envModelPath = envToPath(selectedEnv);
@@ -394,6 +442,10 @@ try {
     // Use the transition helper to provide a short crossfade and apply visuals
     try { startAfternoonTransition(0.6); } catch (e) { /* fallback */ }
     try { setAfternoonMode(true); } catch (e) { /* ignore */ }
+  } else if (envKey === 'house_on_the_hill' || envKey === 'house-on-the-hill' || envKey === 'houseonthehill') {
+    // For the House on the Hill environment, default to Afternoon as well
+    try { startAfternoonTransition(0.6); } catch (e) { /* fallback */ }
+    try { setAfternoonMode(true); } catch (e) { /* ignore */ }
   } else if (envKey === 'autumn_nest' || envKey === 'autumn') {
     setNightMode(true);
   } else {
@@ -402,7 +454,20 @@ try {
 } catch (e) { /* ignore */ }
 
 if (envModelPath) {
-  gltfLoader.load(envModelPath, (gltf) => {
+  // Ensure GLTFLoader will resolve external resources (bin / images) relative
+  // to the model's folder when running on static hosts like GitHub Pages.
+  // We extract the base directory and filename, set the loader's resource/path
+  // and then load by filename so the loader uses the configured base for
+  // additional resource requests.
+  try {
+    const normalized = (envModelPath || '').replace(/\\\\/g, '/');
+    const lastSlash = normalized.lastIndexOf('/');
+    const resourceBase = lastSlash >= 0 ? normalized.substring(0, lastSlash + 1) : '';
+    const modelFile = lastSlash >= 0 ? normalized.substring(lastSlash + 1) : normalized;
+    try { if (typeof gltfLoader.setResourcePath === 'function') gltfLoader.setResourcePath(resourceBase); } catch (e) {}
+    try { if (typeof gltfLoader.setPath === 'function') gltfLoader.setPath(resourceBase); } catch (e) {}
+    // load using the filename so the loader will prefix requests with the setPath/resourcePath
+    gltfLoader.load(modelFile, (gltf) => {
   console.log('Environment GLTF loaded:', selectedEnv, gltf);
   roadModel = gltf.scene.clone();
   // auto-scale and center road model if necessary
@@ -425,6 +490,15 @@ if (envModelPath) {
         // multiply the computed scale to make the Gravity Falls model larger in the scene
         sClamped = Math.min(sClamped * 4.0, 80); // cap absolute scale to avoid extreme values
       }
+      // Per-environment override: make House on the Hill larger so it feels
+      // correctly proportioned to the player perspective
+      try {
+        const key = (selectedEnv || '').toLowerCase();
+        if (key === 'house_on_the_hill' || key === 'house-on-the-hill' || key === 'houseonthehill') {
+          // modest multiplier so interior/exterior scale feels right
+          sClamped = Math.min(sClamped * 3.0, 80);
+        }
+      } catch (e) {}
     } catch (e) {}
     roadModel.scale.setScalar(sClamped);
     console.log('Auto-scaled road model by', s, 'clamped to', sClamped);
@@ -613,7 +687,7 @@ if (envModelPath) {
       // ensure the emoji remains visible on dark background
       afternoonBtn.setAttribute('aria-label', 'Afternoon mode');
       document.body.appendChild(afternoonBtn);
-      afternoonBtn.addEventListener('click', () => { try { startAfternoonTransition(0.6); } catch (e) { console.warn(e); } });
+  afternoonBtn.addEventListener('click', () => { try { toggleAfternoon(); } catch (e) { console.warn(e); } });
 
       // Top-left circular menu button
       const circleMenuBtn = document.createElement('button');
@@ -645,7 +719,44 @@ if (envModelPath) {
       if (!isAutumn && spawnIsDefault) {
         // set spawn to model center at a safe height above the computed ground
         const desiredFeetY = sceneGroundY + 0.6; // small clearance above ground
-        spawn.x = worldCenter.x; spawn.y = desiredFeetY; spawn.z = worldCenter.z;
+        // If this is the 'road' environment, try to find a car/vehicle mesh and
+        // place the spawn beside it so the player starts next to the vehicle.
+        const envKey = (selectedEnv || '').toLowerCase();
+        if (envKey === 'road' && roadModel) {
+          let best = null; let bestVol = 0;
+          const vehicleRegex = /car|vehicle|kart|cart|truck|van|auto|kart_clutter|kart-clutter/i;
+          roadModel.traverse((m) => {
+            if (!m.isMesh) return;
+            const name = (m.name || '') + '';
+            if (!vehicleRegex.test(name)) return;
+            // compute world bbox and use volume as score
+            try {
+              const b = new THREE.Box3().setFromObject(m);
+              const s = new THREE.Vector3(); b.getSize(s);
+              const vol = Math.abs(s.x * s.y * s.z);
+              if (vol > bestVol) { bestVol = vol; best = { mesh: m, bbox: b }; }
+            } catch (e) { /* ignore */ }
+          });
+          if (best && best.bbox) {
+            const vc = new THREE.Vector3(); best.bbox.getCenter(vc);
+            // offset to the side so the player doesn't spawn inside the vehicle
+            const offset = 3.0; // meters to the side
+            spawn.x = vc.x + offset; spawn.y = desiredFeetY; spawn.z = vc.z;
+            console.log('Spawn set beside detected vehicle at', vc, 'spawn=', spawn);
+            // attempt immediate reposition if physics and player exist
+            try { resetPlayerToSpawn(); } catch (e) { /* will be handled later */ }
+          } else {
+            // fallback to world center; also log mesh names for debugging vehicle detection
+            spawn.x = worldCenter.x; spawn.y = desiredFeetY; spawn.z = worldCenter.z;
+            try {
+              const names = [];
+              roadModel.traverse((m) => { if (m.isMesh) { names.push({ name: m.name || '<noname>', bbox: (new THREE.Box3().setFromObject(m)).getSize(new THREE.Vector3()).toArray() }); } });
+              console.log('Vehicle detection: no vehicle match found. Mesh sample:', names.slice(0,20));
+            } catch (e) { console.log('Vehicle detection: failed to enumerate meshes', e); }
+          }
+        } else {
+          spawn.x = worldCenter.x; spawn.y = desiredFeetY; spawn.z = worldCenter.z;
+        }
       }
       // if physics body exists, move the body to the spawn location safely
       if (playerBody) {
@@ -660,49 +771,142 @@ if (envModelPath) {
   // create physics collision shape (Trimesh) for the road if physics is initialized
   try {
     const addRoadTrimesh = (world) => {
-      // gather combined vertex/indices from meshes
-      const verts = [];
-      const indices = [];
-      let indexOffset = 0;
-      roadModel.traverse((c) => {
-        if (c.isMesh && c.geometry && c.geometry.isBufferGeometry) {
-          const geom = c.geometry;
-          const pos = geom.attributes.position;
-          if (!pos) return;
-          // apply mesh's world transform to vertices
-          const worldMatrix = new THREE.Matrix4();
-          c.updateWorldMatrix(true, false);
-          worldMatrix.copy(c.matrixWorld);
-          const v = new THREE.Vector3();
-          for (let i = 0; i < pos.count; i++) {
-            v.fromBufferAttribute(pos, i).applyMatrix4(worldMatrix);
-            verts.push(v.x, v.y, v.z);
-          }
-          if (geom.index) {
-            for (let i = 0; i < geom.index.count; i += 3) {
-              indices.push(
-                geom.index.getX(i) + indexOffset,
-                geom.index.getX(i + 1) + indexOffset,
-                geom.index.getX(i + 2) + indexOffset
-              );
+      // Build a physics Trimesh by including only triangles whose face normal
+      // faces sufficiently upward. This reduces blocking geometry like
+      // vertical walls and small props that otherwise create impassable
+      // surfaces for walking. If filtering yields no triangles, fall back
+      // to the unfiltered trimesh.
+  // Per-environment heuristics
+  const envKey = (selectedEnv || '').toLowerCase();
+  // Default threshold for what counts as 'walkable' (face normal Y component).
+  // House environments may need a lower threshold to include slightly sloped floors.
+  const WALKABLE_NORMAL_Y = (envKey === 'house_on_the_hill' || envKey === 'house-on-the-hill') ? 0.35 : 0.5; // threshold for upward-facing normal (0..1)
+  // Exclude small decorative meshes (props) that cause blocking collisions in house scenes.
+  const PROP_NAME_EXCLUDE = /fence|railing|post|lamp|pole|wire|prop|deco|plant|chair|table|cupboard|book|books|leaf|branch|grass|bush/i;
+  const MIN_MESH_VOLUME = (envKey === 'house_on_the_hill' || envKey === 'house-on-the-hill') ? 0.001 : 1e-9; // world-space bbox volume threshold
+      const filteredVerts = [];
+      const filteredIndices = [];
+
+      // helper tmp vectors to reduce allocations
+      const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+      const ab = new THREE.Vector3(), ac = new THREE.Vector3(), nrm = new THREE.Vector3();
+
+  // iterate meshes and produce triangle list (we duplicate vertices per-triangle
+  // for simplicity of index remapping)
+  let totalTriangles = 0;
+      roadModel.traverse((mesh) => {
+        if (!mesh.isMesh || !mesh.geometry || !mesh.geometry.isBufferGeometry) return;
+        // Determine if this mesh should be skipped for collision generation based on
+        // name heuristics or very small bounding boxes (common for props).
+        const meshName = (mesh.name || '').toLowerCase();
+        // compute world bbox volume to detect tiny props after world transform
+        mesh.updateWorldMatrix(true, false);
+        const mbbox = new THREE.Box3().setFromObject(mesh);
+        let skipMesh = false;
+        try {
+          const extents = new THREE.Vector3(); mbbox.getSize(extents);
+          const volume = Math.abs(extents.x * extents.y * extents.z);
+          if (volume > 0 && volume < MIN_MESH_VOLUME) skipMesh = true;
+        } catch (e) { /* ignore bbox errors */ }
+        if (meshName && PROP_NAME_EXCLUDE.test(meshName)) skipMesh = true;
+        if (skipMesh) return;
+        const geom = mesh.geometry;
+        const posAttr = geom.attributes.position;
+        if (!posAttr) return;
+        const wm = mesh.matrixWorld;
+
+        if (geom.index) {
+          const idx = geom.index.array;
+          for (let i = 0; i < idx.length; i += 3) {
+            const ia = idx[i], ib = idx[i + 1], ic = idx[i + 2];
+            a.fromBufferAttribute(posAttr, ia).applyMatrix4(wm);
+            b.fromBufferAttribute(posAttr, ib).applyMatrix4(wm);
+            c.fromBufferAttribute(posAttr, ic).applyMatrix4(wm);
+            ab.subVectors(b, a);
+            ac.subVectors(c, a);
+            nrm.crossVectors(ab, ac);
+            // skip degenerate triangles
+            if (nrm.lengthSq() < 1e-8) continue;
+            nrm.normalize();
+            totalTriangles++;
+            if (nrm.y >= WALKABLE_NORMAL_Y) {
+              const base = filteredVerts.length / 3;
+              filteredVerts.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+              filteredIndices.push(base, base + 1, base + 2);
             }
-          } else {
-            // non-indexed: create triangles sequentially
-            for (let i = 0; i < pos.count; i += 3) {
-              indices.push(indexOffset + i, indexOffset + i + 1, indexOffset + i + 2);
+          }
+        } else {
+          // non-indexed geometry: vertices come in sequential triples
+          for (let i = 0; i < posAttr.count; i += 3) {
+            a.fromBufferAttribute(posAttr, i).applyMatrix4(wm);
+            b.fromBufferAttribute(posAttr, i + 1).applyMatrix4(wm);
+            c.fromBufferAttribute(posAttr, i + 2).applyMatrix4(wm);
+            ab.subVectors(b, a);
+            ac.subVectors(c, a);
+            nrm.crossVectors(ab, ac);
+            if (nrm.lengthSq() < 1e-8) continue;
+            nrm.normalize();
+            if (nrm.y >= WALKABLE_NORMAL_Y) {
+              const base = filteredVerts.length / 3;
+              filteredVerts.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+              filteredIndices.push(base, base + 1, base + 2);
             }
           }
-          indexOffset += pos.count;
         }
       });
-      if (verts.length === 0 || indices.length === 0) return null;
-  // create Cannon Trimesh (cannon-es expects arrays for vertices and indices)
-  const vertsArr = verts; // array of numbers [x,y,z,...]
-  const indicesArr = indices; // array of integer indices
-  const trimesh = new CANNON.Trimesh(vertsArr, indicesArr);
+
+  // Debug: log filtering results so we can tune WALKABLE_NORMAL_Y
+  console.log('Trimesh building: totalTriangles=', totalTriangles, 'keptTriangles=', filteredIndices.length / 3, 'threshold=', WALKABLE_NORMAL_Y);
+
+  // If filtering removed everything (too strict threshold), fall back to original
+  if (filteredIndices.length === 0) {
+        // Build unfiltered trimesh (original behavior)
+        const verts = [];
+        const indices = [];
+        let indexOffset = 0;
+        roadModel.traverse((c) => {
+          if (c.isMesh && c.geometry && c.geometry.isBufferGeometry) {
+            const geom = c.geometry;
+            const pos = geom.attributes.position;
+            if (!pos) return;
+            const worldMatrix = new THREE.Matrix4();
+            c.updateWorldMatrix(true, false);
+            worldMatrix.copy(c.matrixWorld);
+            const v = new THREE.Vector3();
+            for (let i = 0; i < pos.count; i++) {
+              v.fromBufferAttribute(pos, i).applyMatrix4(worldMatrix);
+              verts.push(v.x, v.y, v.z);
+            }
+            if (geom.index) {
+              for (let i = 0; i < geom.index.count; i += 3) {
+                indices.push(
+                  geom.index.getX(i) + indexOffset,
+                  geom.index.getX(i + 1) + indexOffset,
+                  geom.index.getX(i + 2) + indexOffset
+                );
+              }
+            } else {
+              for (let i = 0; i < pos.count; i += 3) {
+                indices.push(indexOffset + i, indexOffset + i + 1, indexOffset + i + 2);
+              }
+            }
+            indexOffset += pos.count;
+          }
+        });
+  if (verts.length === 0 || indices.length === 0) return null;
+  console.log('Trimesh fallback: using unfiltered geometry. triangles=', indices.length / 3);
+        const trimesh = new CANNON.Trimesh(verts, indices);
+        const body = new CANNON.Body({ mass: 0, material: groundMaterial });
+        body.addShape(trimesh);
+        world.addBody(body);
+        return body;
+      }
+
+  if (filteredVerts.length === 0 || filteredIndices.length === 0) return null;
+  console.log('Trimesh built: walkable triangles=', filteredIndices.length / 3);
+      const trimesh = new CANNON.Trimesh(filteredVerts, filteredIndices);
       const body = new CANNON.Body({ mass: 0, material: groundMaterial });
       body.addShape(trimesh);
-      // position: trimesh vertices were transformed into world-space already
       world.addBody(body);
       return body;
     };
@@ -739,7 +943,8 @@ if (envModelPath) {
             }
             // compute clearance so the player's feet sit noticeably above the surface to avoid the camera
             // being visually inside geometry. Increase default clearance to give visible space.
-            const DEFAULT_CLEARANCE = 0.30; // meters above the surface
+            // Use a slightly larger clearance in house scenes to avoid visual clipping
+            const DEFAULT_CLEARANCE = ((selectedEnv || '').toLowerCase().includes('house_on_the_hill') || (selectedEnv || '').toLowerCase().includes('house-on-the-hill')) ? 0.40 : 0.30; // meters above the surface
             const clearance = DEFAULT_CLEARANCE;
             // record for debug overlay
             lastSnapClearance = clearance;
@@ -791,9 +996,12 @@ if (envModelPath) {
   try {
     // xhr.loaded/xhr.total may be undefined for some loaders; guard and show percent when available
     const hud = document.getElementById('ptr-load-hud');
-    if (hud) {
+      if (hud) {
       if (xhr && xhr.lengthComputable && xhr.total) {
-        const pct = Math.round((xhr.loaded / xhr.total) * 100);
+        // Guard against cases where loaded may exceed total (server chunking / multiple requests)
+        let pct = Math.round((xhr.loaded / xhr.total) * 100);
+        if (!Number.isFinite(pct)) pct = 0;
+        pct = Math.max(0, Math.min(100, pct));
         hud.textContent = `Loading: ${pct}%`;
       } else if (xhr && typeof xhr.loaded === 'number') {
         hud.textContent = `Loading...`;
@@ -801,6 +1009,7 @@ if (envModelPath) {
     }
   } catch (e) {}
   }, (err) => { console.warn('Failed to load road model:', err); });
+  } catch (e) { console.warn('GLTFLoader path set failed', e); }
 } else {
   // No environment selected — skip GLTF loading to avoid loader errors when envModelPath is null
   console.log('Skipping GLTF load: envModelPath is not set.');
@@ -1442,46 +1651,94 @@ gltfLoader.load('assets/man_in_a_suit.glb', (gltf) => {
     // Animate mode transition if active
     try {
       if (transitionActive) {
-        const now = (typeof clock !== 'undefined') ? clock.getElapsedTime() : (performance.now() / 1000);
-        const elapsed = Math.max(0, now - transitionStart);
-        const p = Math.min(1, elapsed / transitionDuration);
-        const ease = p * (2 - p); // easeOut
-        // interpolate ambient color & intensity
-        try {
-          const ambientFrom = transitionFromNight ? 0x172136 : 0xffe1b3;
-          const ambientTo = transitionToNight ? 0x172136 : 0xffe1b3;
-          const ambCol = lerpColor(ambientFrom, ambientTo, ease);
-          if (ambient) { ambient.color.set(ambCol); ambient.intensity = lerp(transitionFromNight ? 0.18 : 0.6, transitionToNight ? 0.18 : 0.6, ease); }
-        } catch (e) {}
-        // hemisphere
-        try {
-          const hemiFrom = transitionFromNight ? 0x223244 : 0xffc98d;
-          const hemiTo = transitionToNight ? 0x223244 : 0xffc98d;
-          const hemiCol = lerpColor(hemiFrom, hemiTo, ease);
-          if (hemi) { hemi.color.set(hemiCol); hemi.intensity = lerp(transitionFromNight ? 0.28 : 0.5, transitionToNight ? 0.28 : 0.5, ease); }
-        } catch (e) {}
-        // directional light
-        try {
-          const dirFrom = transitionFromNight ? 0xa3bff4 : 0xffd6a3;
-          const dirTo = transitionToNight ? 0xa3bff4 : 0xffd6a3;
-          const dirCol = lerpColor(dirFrom, dirTo, ease);
-          if (dirLight) { dirLight.color.set(dirCol); dirLight.intensity = lerp(transitionFromNight ? 0.7 : 2.0, transitionToNight ? 0.7 : 2.0, ease); }
-        } catch (e) {}
-        // fog
-        try { if (scene && scene.fog) { const fogFrom = transitionFromNight ? 0x071025 : 0xffb86b; const fogTo = transitionToNight ? 0x071025 : 0xffb86b; const fogCol = lerpColor(fogFrom, fogTo, ease); scene.fog.color.set(fogCol); scene.fog.density = lerp(transitionFromNight ? 0.02 : 0.02, transitionToNight ? 0.02 : 0.02, ease); } } catch (e) {}
-        // renderer exposure
-        try { if (renderer) renderer.toneMappingExposure = lerp(transitionFromNight ? 0.75 : 1.2, transitionToNight ? 0.75 : 1.2, ease); } catch (e) {}
-        // overlay opacity: fade out as we near end
-        try { bgOverlay.style.opacity = String(1 - ease); } catch (e) {}
+          const now = (typeof clock !== 'undefined') ? clock.getElapsedTime() : (performance.now() / 1000);
+          const elapsed = Math.max(0, now - transitionStart);
+          const p = Math.min(1, elapsed / transitionDuration);
+          const ease = p * (2 - p); // easeOut
 
-        if (p >= 1.0) {
-          // finalize
-          transitionActive = false;
-          isNight = transitionToNight;
-          // ensure final stable state
-          setNightMode(isNight);
-          try { bgOverlay.style.opacity = '0'; } catch (e) {}
-        }
+          // helper to get visual params for a named mode
+          const visualParamsFor = (mode) => {
+            // return a minimal set of colors/intensities for interpolation
+            switch (mode) {
+              case 'night': return {
+                ambientColor: 0x172136, ambientIntensity: 0.40,
+                hemiColor: 0x223244, hemiGround: 0x071018, hemiIntensity: 0.28,
+                dirColor: 0xa3bff4, dirIntensity: 0.7,
+                fogColor: 0x071025, fogDensity: 0.02,
+                exposure: 0.75
+              };
+              case 'afternoon': return {
+                ambientColor: 0xbfdfff, ambientIntensity: 0.55,
+                hemiColor: 0xcfefff, hemiGround: 0xd0eaff, hemiIntensity: 0.35,
+                dirColor: 0xffffff, dirIntensity: 1.1,
+                fogColor: 0xffb86b, fogDensity: 0.0, // afternoon clears fog
+                exposure: 0.95
+              };
+              case 'day':
+              default: return {
+                ambientColor: 0xffe1b3, ambientIntensity: 0.6,
+                hemiColor: 0xffc98d, hemiGround: 0x332211, hemiIntensity: 0.5,
+                dirColor: 0xffd6a3, dirIntensity: 2.0,
+                fogColor: 0xffb86b, fogDensity: 0.02,
+                exposure: 1.2
+              };
+            }
+          };
+
+          try {
+            const from = visualParamsFor(transitionSource || (isNight ? 'night' : (isAfternoon ? 'afternoon' : 'day')));
+            const to = visualParamsFor(transitionTarget || (transitionToNight ? 'night' : 'day'));
+            // ambient
+            const ambCol = lerpColor(from.ambientColor, to.ambientColor, ease);
+            if (ambient) { ambient.color.set(ambCol); ambient.intensity = lerp(from.ambientIntensity, to.ambientIntensity, ease); }
+            // hemisphere
+            const hemiCol = lerpColor(from.hemiColor, to.hemiColor, ease);
+            if (hemi) { hemi.color.set(hemiCol); hemi.groundColor.set(lerpColor(from.hemiGround, to.hemiGround, ease)); hemi.intensity = lerp(from.hemiIntensity, to.hemiIntensity, ease); }
+            // directional
+            const dirCol = lerpColor(from.dirColor, to.dirColor, ease);
+            if (dirLight) { dirLight.color.set(dirCol); dirLight.intensity = lerp(from.dirIntensity, to.dirIntensity, ease); }
+            // fog: interpolate color and density; if target density == 0 treat as clearing fog
+            try {
+              const fogFrom = typeof from.fogColor !== 'undefined' ? from.fogColor : 0x000000;
+              const fogTo = typeof to.fogColor !== 'undefined' ? to.fogColor : 0x000000;
+              const fogCol = lerpColor(fogFrom, fogTo, ease);
+              const fogDensity = lerp(from.fogDensity || 0.0, to.fogDensity || 0.0, ease);
+              if (scene) {
+                if (fogDensity <= 0.00001) {
+                  // keep a minimal fog object while transitioning to fully clear so shader state is stable
+                  try { if (scene.fog) { scene.fog.color.set(fogCol); scene.fog.density = Math.max(0.0, fogDensity); } else { scene.fog = new THREE.FogExp2(fogCol, Math.max(0.0, fogDensity)); } } catch (e) {}
+                } else {
+                  try { if (!scene.fog) scene.fog = new THREE.FogExp2(fogCol, Math.max(0.0, fogDensity)); else { scene.fog.color.set(fogCol); scene.fog.density = Math.max(0.0, fogDensity); } } catch (e) {}
+                }
+              }
+            } catch (e) {}
+            // renderer exposure
+            try { if (renderer) renderer.toneMappingExposure = lerp(from.exposure, to.exposure, ease); } catch (e) {}
+            // overlay opacity: fade out as we near end
+            try { bgOverlay.style.opacity = String(1 - ease); } catch (e) {}
+          } catch (e) { /* ignore per-visual errors */ }
+
+          if (p >= 1.0) {
+            // finalize and set stable mode
+            transitionActive = false;
+            try {
+              if (transitionTarget === 'afternoon') {
+                setAfternoonMode(true);
+                isAfternoon = true;
+                isNight = false;
+              } else if (transitionTarget === 'night') {
+                setNightMode(true);
+                isNight = true;
+                isAfternoon = false;
+              } else {
+                // day
+                setNightMode(false);
+                isNight = false;
+                isAfternoon = false;
+              }
+            } catch (e) { /* ignore finalization errors */ }
+            try { bgOverlay.style.opacity = '0'; } catch (e) {}
+          }
       }
     } catch (e) { /* ignore transition errors */ }
 
